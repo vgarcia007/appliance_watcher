@@ -235,6 +235,7 @@ class WasherState:
         self.last_power_w: float = 0.0
         self.last_state_change_iso: str = now_iso()
         self._lock = threading.Lock()
+        self.cycle_data: List[Tuple[float, float]] = []  # (mono_time, power)
         self._update_registry()
 
     # --- helpers ---
@@ -282,6 +283,7 @@ class WasherState:
     def _enter_running(self):
         self.run_started_at = now_mono()
         self.last_below_idle = None
+        self.cycle_data = []
         self._set_state("RUNNING")
 
     def _enter_quiet_timer(self):
@@ -295,12 +297,37 @@ class WasherState:
         self._set_state("FINISHED")
         self._log("sending ntfy")
         send_ntfy(self.c, msg)
+        self._log_complete_cycle(dur_s)
         # enter cooldown
         self.cooldown_until = now_mono() + self.c.cooldown_seconds
         self.last_above_start = None
         self.last_below_idle = None
         self.run_started_at = None
         self._set_state("COOLDOWN")
+
+    def _log_complete_cycle(self, duration_s: int):
+        if not self.cycle_data:
+            return
+        
+        log_dir = "/app/logs"
+        finished_time = dt.datetime.now()
+        filename = f"{self.c.name.replace(' ', '_')}_{finished_time.strftime('%Y-%m-%d_%H-%M-%S')}.json"
+        filepath = os.path.join(log_dir, filename)
+
+        try:
+            cycle_entry = {
+                "device": self.c.name,
+                "started_at": self._iso_or_none(self.run_started_at),
+                "finished_at": finished_time.isoformat(timespec="seconds"),
+                "duration_s": duration_s,
+                "data": [{"time_offset_s": round(t - self.run_started_at, 1), "power_w": round(p, 1)} for t, p in self.cycle_data]
+            }
+            os.makedirs(log_dir, exist_ok=True)
+            with open(filepath, "w", encoding="utf-8") as f:
+                json.dump(cycle_entry, f, ensure_ascii=False, indent=2)
+            self._log(f"cycle data saved to {filepath}")
+        except Exception as e:
+            self._log(f"cycle log error: {e}")
 
     # --- public ---
 
@@ -328,6 +355,7 @@ class WasherState:
                 return
 
             if self.state == "RUNNING":
+                self.cycle_data.append((t, power_w))
                 if power_w <= self.c.idle_threshold_w:
                     if self.last_below_idle is None:
                         self.last_below_idle = t
@@ -415,7 +443,7 @@ def poll_device_loop(dev: DeviceConfig, gcfg: GlobalConfig, heartbeat_seconds: O
         if heartbeat_seconds:
             if (now_mono() - last_heartbeat) >= heartbeat_seconds:
                 snap = _status_registry.snapshot().get(dev.name, {})
-                tprint(f"[{dev.name}] HEARTBEAT state={snap.get('state')} power={snap.get('last_power_w')}W")
+                tprint(f"[dev.name] HEARTBEAT state={snap.get('state')} power={snap.get('last_power_w')}W")
                 last_heartbeat = now_mono()
 
         slept = 0.0

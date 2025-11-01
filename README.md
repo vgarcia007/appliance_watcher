@@ -236,3 +236,48 @@ Set `HEARTBEAT_SECONDS=60` to get periodic status updates in logs every 60 secon
 - Check status endpoint: `curl http://localhost:8866/status`
 - Enable heartbeat logs with `HEARTBEAT_SECONDS=60`
 - Monitor container health: `docker-compose ps`
+
+## Cycle Logging
+
+For detailed analysis and profiling of appliance cycles (e.g., washing programs), the watcher can save a complete power profile for each completed run.
+
+When a device cycle finishes, the application will create a new JSON file in the `/app/logs/` directory inside the container.
+
+### File Naming and Content
+
+-   **Location**: `/app/logs/`
+-   **Filename**: `<Device-Name>_<Timestamp>.json` (e.g., `Washing_Machine_2023-10-27_15-30-00.json`)
+-   **Content**: Each file is a single JSON object containing:
+    -   Device name, start/finish times, and total duration.
+    -   A `data` array with power readings (`power_w`) and their time offset in seconds from the start of the cycle.
+
+**Example JSON file:**
+```json
+{
+  "device": "Washing Machine",
+  "started_at": "2023-10-27T14:00:00",
+  "finished_at": "2023-10-27T15:30:00",
+  "duration_s": 5400,
+  "data": [
+    { "time_offset_s": 0.0, "power_w": 2.1 },
+    { "time_offset_s": 3.1, "power_w": 1500.5 },
+    { "time_offset_s": 6.2, "power_w": 1502.0 },
+    ...
+  ]
+}
+```
+
+### Accessing the Log Files
+
+To access these log files on your host machine, you must map a local directory to the `/app/logs` directory in the container. Add the following volume mapping to your `docker-compose.yml`:
+
+```yaml
+services:
+  tasmota_watcher:
+    # ... other config ...
+    volumes:
+      - ./logs:/app/logs
+      - ./devices.json:/app/devices.json:ro
+```
+
+This will cause all log files to appear in a `logs` folder in your project directory.
