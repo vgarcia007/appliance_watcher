@@ -22,7 +22,8 @@
     "ntfy_topic": "appliances",
     "ntfy_title": "Washing Machine",
     "ntfy_icon": "https://example.com/washer.png",
-    "ntfy_priority": 5
+    "ntfy_priority": 5,
+    "log_cycles": true
   },
   {
     "name": "Dryer",
@@ -43,6 +44,7 @@
     "ntfy_url": "https://ntfy.sh",
     "ntfy_topic": "appliances",
     "ntfy_title": "Dryer",
-    "ntfy_priority": 5
+    "ntfy_priority": 5,
+    "log_cycles": false
   }
 ]

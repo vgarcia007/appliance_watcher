@@ -243,6 +243,10 @@ For detailed analysis and profiling of appliance cycles (e.g., washing programs)
 
 When a device cycle finishes, the application will create a new JSON file in the `/app/logs/` directory inside the container.
 
+**To enable this feature**, you must add `"log_cycles": true` to the device's configuration in your `devices.json` file.
+
+When a device cycle finishes (and `log_cycles` is enabled), the application will create a new JSON file in the `/app/logs/` directory inside the container.
+
 ### File Naming and Content
 
 -   **Location**: `/app/logs/`
