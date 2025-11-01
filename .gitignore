@@ -31,7 +31,9 @@ Thumbs.db
 
 # Logs
 *.log
-logs/
+# Ignore content of logs dir, but not the dir itself
+logs/*
+!logs/.gitkeep
 
 # CSV data files
 *.csv
