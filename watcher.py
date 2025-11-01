@@ -131,6 +131,9 @@ class DeviceConfig:
         self.csv_log_path: Optional[str] = d.get("csv_log_path")
         self.log_quiet_progress: bool = bool(d.get("log_quiet_progress", False))
 
+        # Cycle logging
+        self.log_cycles: bool = bool(d.get("log_cycles", False))
+
 
 class GlobalConfig:
     def __init__(self, args):
@@ -306,7 +309,7 @@ class WasherState:
         self._set_state("COOLDOWN")
 
     def _log_complete_cycle(self, duration_s: int):
-        if not self.cycle_data:
+        if not self.c.log_cycles or not self.cycle_data:
             return
         
         log_dir = "/app/logs"
