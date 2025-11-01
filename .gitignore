@@ -1,0 +1,38 @@
+# Environment files with secrets
+.env
+.env.local
+.env.production
+
+# Device configuration with real IPs/settings
+devices.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+
+# Docker
+.dockerignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# CSV data files
+*.csv
+data/

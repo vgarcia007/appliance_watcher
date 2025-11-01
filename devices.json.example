@@ -1,0 +1,48 @@
+[
+  {
+    "name": "Washing Machine",
+    "source": "shelly_rpc",
+    "base_url": "http://192.168.1.100",
+    "device_user": null,
+    "device_pass": null,
+    "shelly_rpc_method": "PM1.GetStatus",
+    "shelly_rpc_params": { "id": 0 },
+    "shelly_power_field": "apower",
+
+    "poll_interval": 3,
+    "start_threshold_w": 20,
+    "idle_threshold_w": 6,
+    "start_confirm_seconds": 15,
+    "quiet_confirm_seconds": 75,
+    "min_run_seconds": 1800,
+    "blip_tolerance_seconds": 8,
+    "cooldown_seconds": 150,
+
+    "ntfy_url": "https://ntfy.sh",
+    "ntfy_topic": "appliances",
+    "ntfy_title": "Washing Machine",
+    "ntfy_icon": "https://example.com/washer.png",
+    "ntfy_priority": 5
+  },
+  {
+    "name": "Dryer",
+    "source": "tasmota",
+    "base_url": "http://192.168.1.101",
+    "device_user": null,
+    "device_pass": null,
+
+    "poll_interval": 3,
+    "start_threshold_w": 25,
+    "idle_threshold_w": 5,
+    "start_confirm_seconds": 12,
+    "quiet_confirm_seconds": 60,
+    "min_run_seconds": 3600,
+    "blip_tolerance_seconds": 6,
+    "cooldown_seconds": 180,
+
+    "ntfy_url": "https://ntfy.sh",
+    "ntfy_topic": "appliances",
+    "ntfy_title": "Dryer",
+    "ntfy_priority": 5
+  }
+]

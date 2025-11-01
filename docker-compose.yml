@@ -1,0 +1,13 @@
+services:
+  appliance-watch:
+    build: .
+    image: appliance-watch:latest
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./devices.json:/app/devices.json:ro
+    environment:
+      - DEVICES_FILE=/app/devices.json
+    ports:
+      - "8866:8080"
