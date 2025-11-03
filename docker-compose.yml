@@ -6,6 +6,7 @@ services:
     env_file:
       - .env
     volumes:
+      - ./logs:/app/logs
       - ./devices.json:/app/devices.json:ro
     environment:
       - DEVICES_FILE=/app/devices.json
