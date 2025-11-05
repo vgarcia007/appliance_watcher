@@ -1,0 +1,1 @@
+docker cp index.html tasmota_watcher-appliance-watch-1:/app/index.html

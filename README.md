@@ -1,6 +1,17 @@
 # Appliance Watcher
 
-Monitor washing machines, dryers, and other appliances via power consumption. Get notified when cycles complete.
+Smart monitoring for washing machines, dryers, and other appliances via power consumption analysis. Features automated program detection, progress tracking, and completion notifications with a modern web dashboard.
+
+## Features
+
+- 🔌 **Multi-Device Support**: Monitor Tasmota and Shelly Gen3 devices
+- 🧠 **Smart Program Detection**: ML-based automatic program recognition from power patterns
+- 📊 **Progress Tracking**: Real-time progress estimation and remaining time calculation
+- 🌐 **Web Dashboard**: Responsive Bootstrap 5 interface with live updates
+- 📱 **Push Notifications**: ntfy.sh integration for cycle completion alerts
+- 📈 **Cycle Logging**: Detailed power consumption data export for analysis
+- 🔄 **Fallback Rules**: Manual program detection rules as backup
+- 🎯 **Smart State Machine**: Robust detection with configurable thresholds
 
 ## Supported Devices
 
@@ -32,7 +43,7 @@ Monitor washing machines, dryers, and other appliances via power consumption. Ge
    docker-compose up -d
    ```
 
-The service will be available at `http://localhost:8866/status` for monitoring.
+The web dashboard will be available at `http://localhost:8866` and the JSON API at `http://localhost:8866/status`.
 
 ## Configuration
 
@@ -78,7 +89,23 @@ Example for Shelly device:
     "ntfy_topic": "appliances",
     "ntfy_title": "Washing Machine",
     "ntfy_icon": "https://example.com/washer.png",
-    "ntfy_priority": 5
+    "ntfy_priority": 5,
+    
+    "log_cycles": true,
+    "enable_auto_learning": true,
+    "min_cycles_for_learning": 3,
+    "program_rules": [
+      {
+        "name": "Eco Wash",
+        "conditions": {
+          "avg_power_min": 80,
+          "avg_power_max": 120,
+          "max_power_min": 1800,
+          "max_power_max": 2200
+        },
+        "confidence": 0.8
+      }
+    ]
   }
 ]
 ```
@@ -106,7 +133,10 @@ Example for Tasmota device:
     "ntfy_url": "https://ntfy.sh",
     "ntfy_topic": "appliances",
     "ntfy_title": "Dryer",
-    "ntfy_priority": 5
+    "ntfy_priority": 5,
+    
+    "log_cycles": true,
+    "enable_auto_learning": true
   }
 ]
 ```
@@ -154,19 +184,63 @@ Example for Tasmota device:
 | `ntfy_icon` | Icon URL (optional) | `"https://example.com/icon.png"` |
 | `ntfy_priority` | Priority level (1-5) | `5` |
 
+### Machine Learning & Program Detection
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `log_cycles` | Enable cycle data logging | `false` |
+| `enable_auto_learning` | Enable ML-based program detection | `true` |
+| `min_cycles_for_learning` | Minimum cycles needed for ML | `3` |
+| `program_rules` | Fallback program detection rules | `[]` |
+
+### Program Rules Format
+
+Program rules provide fallback detection when ML data is insufficient:
+
+```json
+"program_rules": [
+  {
+    "name": "Eco Wash",
+    "conditions": {
+      "avg_power_min": 80,
+      "avg_power_max": 120,
+      "max_power_min": 1800,
+      "max_power_max": 2200,
+      "high_power_threshold": 1500,
+      "high_power_ratio_min": 0.1,
+      "high_power_ratio_max": 0.3
+    },
+    "confidence": 0.8
+  }
+]
+```
+
 ## How It Works
 
-1. **Monitors power consumption** every few seconds
+1. **Monitors power consumption** every few seconds via device APIs
 2. **Detects cycle start** when power rises above threshold for confirmation time
-3. **Detects cycle end** when power drops below idle threshold and stays quiet
-4. **Sends notification** via ntfy when cycle completes
-5. **Cooldown period** prevents duplicate notifications
+3. **Records power patterns** during the cycle for analysis
+4. **Predicts program type** using ML clustering or fallback rules
+5. **Estimates progress** and remaining time based on historical data
+6. **Detects cycle end** when power drops below idle threshold and stays quiet
+7. **Sends notification** via ntfy when cycle completes
+8. **Logs cycle data** for future ML training (if enabled)
+9. **Cooldown period** prevents duplicate notifications
 
 ## State Machine
 
 ```
 IDLE → power up → RUNNING → power down → QUIET_TIMER → confirm → FINISHED → COOLDOWN → IDLE
+      ↗ (start confirmation)  ↓ (ML prediction + progress tracking)
 ```
+
+### States Explained
+
+- **IDLE**: Waiting for device to start (power below start threshold)
+- **RUNNING**: Active cycle detected (collecting power data, predicting program)
+- **QUIET_TIMER**: Power dropped, confirming end of cycle
+- **FINISHED**: Cycle completed, notification sent
+- **COOLDOWN**: Preventing duplicate detection for a configured period
 
 ## Docker Compose
 
@@ -185,24 +259,65 @@ View logs with:
 docker-compose logs -f appliance-watch
 ```
 
+## Web Dashboard
+
+Access the modern web interface at `http://localhost:8866` to view:
+
+- 📊 **Real-time device status** with color-coded state indicators
+- 🧠 **Program predictions** with confidence levels
+- ⏱️ **Progress tracking** with estimated remaining time
+- 📈 **Live power consumption** updates every 5 seconds
+- 📱 **Mobile-responsive** Bootstrap 5 design
+- 🎨 **FontAwesome icons** for intuitive interface
+
+### Dashboard Features
+
+- **Device Cards**: Individual cards for each monitored appliance
+- **State Indicators**: Color-coded headers showing current state (IDLE, RUNNING, etc.)
+- **Power Display**: Current power consumption in watts
+- **Program Detection**: Shows detected program with confidence percentage
+- **Progress Bar**: Visual progress indicator when program is recognized
+- **Time Estimates**: Start time and estimated remaining duration
+- **API Access**: Direct link to JSON API in navigation bar
+
 ## Monitoring
 
-### Status Server
+### JSON Status API
 
 The application provides a JSON status endpoint at `http://localhost:8866/status` that shows:
 - Current state of all devices
-- Last power reading
-- Timestamps of state changes
+- Last power reading and timestamps
+- Program predictions and confidence levels
+- Progress estimates and remaining time
+- Device configuration and thresholds
 
 Example response:
 ```json
 {
-  "ts": "2025-10-27T15:30:45",
+  "ts": "2025-11-05T15:30:45",
   "devices": {
     "Washing Machine": {
+      "name": "Washing Machine",
+      "source": "shelly_rpc",
       "state": "RUNNING",
-      "last_power_w": 45.2,
-      "run_started_at": "2025-10-27T15:15:30"
+      "last_power_w": 145.2,
+      "last_state_change": "2025-11-05T15:15:30",
+      "run_started_at": "2025-11-05T15:15:30",
+      "predicted_program": "Eco Wash",
+      "prediction_confidence": 0.85,
+      "estimated_total_duration_s": 5400,
+      "estimated_remaining_s": 3240,
+      "progress_percent": 40.0,
+      "cooldown_remaining_s": 0,
+      "thresholds": {
+        "start_threshold_w": 20.0,
+        "idle_threshold_w": 6.0,
+        "start_confirm_s": 15,
+        "quiet_confirm_s": 75,
+        "min_run_s": 1800,
+        "blip_tol_s": 8
+      },
+      "updated_at": "2025-11-05T15:30:45"
     }
   }
 }
@@ -237,13 +352,15 @@ Set `HEARTBEAT_SECONDS=60` to get periodic status updates in logs every 60 secon
 - Enable heartbeat logs with `HEARTBEAT_SECONDS=60`
 - Monitor container health: `docker-compose ps`
 
-## Cycle Logging
+## Cycle Logging & Machine Learning
 
-For detailed analysis and profiling of appliance cycles (e.g., washing programs), the watcher can save a complete power profile for each completed run.
+The watcher automatically learns appliance patterns to improve program detection over time. It saves detailed power consumption data for each completed cycle, which is used for:
 
-When a device cycle finishes, the application will create a new JSON file in the `/app/logs/` directory inside the container.
+- **Automatic Program Recognition**: ML clustering identifies similar cycles
+- **Progress Estimation**: Historical data predicts remaining time
+- **Pattern Analysis**: Power consumption profiling for optimization
 
-**To enable this feature**, you must add `"log_cycles": true` to the device's configuration in your `devices.json` file.
+**To enable these features**, add `"log_cycles": true` and `"enable_auto_learning": true` to your device configuration.
 
 When a device cycle finishes (and `log_cycles` is enabled), the application will create a new JSON file in the `/app/logs/` directory inside the container.
 
@@ -259,9 +376,16 @@ When a device cycle finishes (and `log_cycles` is enabled), the application will
 ```json
 {
   "device": "Washing Machine",
-  "started_at": "2023-10-27T14:00:00",
-  "finished_at": "2023-10-27T15:30:00",
+  "started_at": "2025-11-05T14:00:00",
+  "finished_at": "2025-11-05T15:30:00",
   "duration_s": 5400,
+  "predicted_program": "Eco Wash",
+  "prediction_confidence": 0.85,
+  "statistics": {
+    "avg_power_w": 95.2,
+    "max_power_w": 1850.0,
+    "data_points": 1800
+  },
   "data": [
     { "time_offset_s": 0.0, "power_w": 2.1 },
     { "time_offset_s": 3.1, "power_w": 1500.5 },
@@ -270,6 +394,15 @@ When a device cycle finishes (and `log_cycles` is enabled), the application will
   ]
 }
 ```
+
+### Machine Learning Process
+
+1. **Data Collection**: Power readings collected every few seconds during cycles
+2. **Feature Extraction**: Statistical analysis (avg, max, patterns, variations)
+3. **Clustering**: Similar cycles grouped into program profiles
+4. **Prediction**: Real-time program identification using historical patterns
+5. **Confidence Scoring**: Reliability assessment for each prediction
+6. **Fallback Rules**: Manual rules when ML data insufficient
 
 ### Accessing the Log Files
 

@@ -180,6 +180,20 @@ class StatusHandler(BaseHTTPRequestHandler):
         self.send_response(code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(raw)))
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        self.end_headers()
+        self.wfile.write(raw)
+
+    def _send_html(self, html_content, code=200):
+        raw = html_content.encode("utf-8")
+        self.send_response(code)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(raw)))
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
         self.end_headers()
         self.wfile.write(raw)
 
@@ -190,8 +204,28 @@ class StatusHandler(BaseHTTPRequestHandler):
                 "ts": now_iso(),
                 "devices": _status_registry.snapshot()
             })
+        elif parsed.path == "/" or parsed.path == "/index.html":
+            try:
+                # Try to read index.html from the same directory as this script
+                script_dir = os.path.dirname(os.path.abspath(__file__))
+                index_path = os.path.join(script_dir, "index.html")
+                with open(index_path, "r", encoding="utf-8") as f:
+                    html_content = f.read()
+                self._send_html(html_content)
+            except FileNotFoundError:
+                self._send_json({"error": "index.html not found"}, code=404)
+            except Exception as e:
+                self._send_json({"error": f"Failed to load index.html: {str(e)}"}, code=500)
         else:
             self._send_json({"error": "not found"}, code=404)
+
+    def do_OPTIONS(self):
+        # Handle preflight CORS requests
+        self.send_response(200)
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        self.end_headers()
 
     def log_message(self, fmt, *args):
         # Silence default HTTP server logging to keep stdout clean
