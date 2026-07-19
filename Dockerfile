@@ -8,6 +8,7 @@ COPY requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY watcher.py /app/watcher.py
+COPY profile_learn.py /app/profile_learn.py
 COPY index.html /app/index.html
 
 USER nobody

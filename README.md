@@ -52,7 +52,10 @@ The web dashboard will be available at `http://localhost:8866` and the JSON API 
 ```properties
 NTFY_USER=your_ntfy_username
 NTFY_PASS=your_ntfy_password
+NTFY_ENABLED=true
 ```
+
+Set `NTFY_ENABLED=false` to disable all ntfy notifications globally.
 
 Optional monitoring settings:
 ```properties
@@ -354,7 +357,13 @@ Set `HEARTBEAT_SECONDS=60` to get periodic status updates in logs every 60 secon
 
 ## Cycle Logging & Machine Learning
 
-The watcher automatically learns appliance patterns to improve program detection over time. It saves detailed power consumption data for each completed cycle, which is used for:
+The watcher saves detailed power consumption data for each completed cycle. Run the profile learner manually after enough new cycles have accumulated:
+
+```bash
+docker compose exec -T appliance-watch python /app/profile_learn.py
+```
+
+The learner updates `logs/profiles.json`; the watcher uses that compact file for program recognition and duration estimates. The cycle data is used for:
 
 - **Automatic Program Recognition**: ML clustering identifies similar cycles
 - **Progress Estimation**: Historical data predicts remaining time

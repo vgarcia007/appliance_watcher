@@ -10,5 +10,6 @@ services:
       - ./devices.json:/app/devices.json:ro
     environment:
       - DEVICES_FILE=/app/devices.json
+      - NTFY_ENABLED=${NTFY_ENABLED:-true}
     ports:
       - "8866:8080"
